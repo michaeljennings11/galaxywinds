@@ -31,32 +31,29 @@ def read_photons(line="SiII-1260"):
     return ds
 
 
-def mu_alpha(npoints: int, alpha: float = 90) -> np.ndarray:
-    if alpha == 90:
-        xs = np.random.uniform(-1, 1, npoints)
-    else:
-        xs_left = np.cos(np.radians(alpha))
-        xs = np.concatenate(
-            (
-                np.random.uniform(-1, -xs_left, npoints // 2),
-                np.random.uniform(xs_left, 1, npoints - npoints // 2),
-            )
-        )
-    return xs
+def randSphericalCap(npoints: int = 100, alpha: float = 90) -> np.ndarray:
+    alpha = np.radians(alpha)
+    phi = np.random.uniform(0, 1, npoints) * 2 * np.pi
+    x = np.random.uniform(0, 1, npoints) * (1 - np.cos(alpha)) + np.cos(alpha)
+    y = np.sqrt(1 - x**2) * np.cos(phi)
+    z = np.sqrt(1 - x**2) * np.sin(phi)
+    r = np.asarray([x, y, z])
+    return r
 
 
-def mu_psi(xs: np.ndarray, psi: float = 0) -> np.ndarray:
-    thetas = np.arccos(xs)  # get angles in radians from x-axis
-    ys = np.sin(thetas) * np.random.choice([-1, 1], len(xs))  # generate y-coords
-    xs_r = xs * np.cos(np.radians(psi)) - ys * np.sin(
-        np.radians(psi)
-    )  # x-coords of rotated points around z-axis by angle psi
-    return xs_r
+def rotateWind(r: np.ndarray, psi: float = 0) -> np.ndarray:
+    if psi != 0:
+        psi = np.radians(psi)
+        cp = np.cos(psi)
+        sp = np.sin(psi)
+        Rz = np.matrix([[cp, -sp, 0], [sp, cp, 0], [0, 0, 1]])
+        r = np.asarray(Rz * r)
+    return r
 
 
-def xr_points(npoints: int, alpha: float = 90, psi: float = 0) -> np.ndarray:
+def randWindPoints(npoints: int = 100, alpha: float = 90, psi: float = 0):
     """
-    Return x-coordinates of points uniformly distributed on the surface of unit-sphere.
+    Return x,y,z coordinates of points uniformly distributed on the surface of unit-sphere.
 
     Parameters
     ----------
@@ -69,10 +66,14 @@ def xr_points(npoints: int, alpha: float = 90, psi: float = 0) -> np.ndarray:
     """
     if not ((0 <= alpha <= 90) & (0 <= psi <= 90)):
         raise ValueError("Angles alpha and psi must be within 0 and 90 degrees")
-    xs = mu_alpha(npoints, alpha)
-    if (psi != 0) & (alpha != 90):
-        xs = mu_psi(xs, psi)
-    return xs
+    r1 = randSphericalCap(npoints // 2, alpha)  # generate 1st cone coordinates
+    r2 = randSphericalCap(
+        npoints - npoints // 2, alpha
+    )  # generate 2nd cone coordinates
+    if psi != 0:
+        r1 = rotateWind(r1, psi)  # rotate 1st cone
+    r2 = rotateWind(r2, psi + 180)  # rotate 2nd cone coordinates
+    return np.concatenate((r1, r2), axis=1)
 
 
 def build_spec(ds: dict, mu_dist: np.ndarray, dv: float = 3):
@@ -111,7 +112,7 @@ if __name__ == "__main__":
     nclouds = 500
     alpha = 90  # spherical outflow
     psi = 0
-    mu_clouds = xr_points(nclouds, alpha, psi)
+    mu_clouds, _, _ = randWindPoints(nclouds, alpha, psi)
 
     # Build spectrum
     wave, flux = build_spec(ds_photons, mu_clouds)
