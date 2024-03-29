@@ -14,6 +14,6 @@ The current implementation generates a random uniform distribution of clouds upo
 
 The SiII 1260 spectrum shown below is for 500 clouds on a spherical shell with opening angle of 45 degrees aligned with the line-of-sight.
 <p float="left">
-  <img src="figures/model_a45p0.png" width="200" />
-  <img src="figures/SiII1260_a45p0.png" width="327" /> 
+  <img src="figures/model_a45p0.png" width="35.2%" />
+  <img src="figures/SiII1260_a45p0.png" width="57.5%" /> 
 </p>
