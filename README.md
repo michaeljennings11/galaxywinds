@@ -13,4 +13,7 @@ The SiII photon data is produced by running [COLT](https://colt.readthedocs.io/e
 The current implementation generates a random uniform distribution of clouds upon the surface of the unit sphere and builds the spectrum for SiII 1260. The wind opening angle and line-of-sight orientation can both be changed between 0 and 90 degrees.
 
 The SiII 1260 spectrum shown below is for 500 clouds on a spherical shell with opening angle of 45 degrees aligned with the line-of-sight.
-![](figures/SiII1260_a45p0.png)
+<p float="left">
+  <img src="figures/model_a45p0.png" width="200" />
+  <img src="figures/SiII1260_a45p0.png" width="327" /> 
+</p>
