@@ -4,7 +4,7 @@ galaxywinds is a Python code to generate mock spectra of multiphase galaxy outfl
 ## The Model
 A multiphase galaxy wind observation can be parameterized by 9 parameters as shown in the following figure.
 ![](figures/mp_windmodel.png)
-The goal of the galaxywinds project is to model multiphase galaxy winds by isolating each individual cold cloud as a single building block. Monte Carlo radiative transport is used to output photon data for a given line transition on each cold cloud. The clouds can then be distributed in a physically motivated geometry within the wind such that the entire galaxy wind spectrum can then be constructed by summing the building blocks.
+The goal of the galaxywinds project is to model multiphase galaxy winds by isolating each individual cold cloud as a single building block. Monte Carlo radiative transport is used to output photon data for a given line transition on each cold cloud. The clouds can then be distributed in a physically motivated geometry within the wind (e.g. [Fielding & Bryan, 2022](https://iopscience.iop.org/article/10.3847/1538-4357/ac2f41)) such that the entire galaxy wind spectrum can then be constructed by summing the building blocks.
 
 ## Usage
 The SiII photon data is produced by running [COLT](https://colt.readthedocs.io/en/latest/) on a cloud simulated using [enzo-e](https://enzo-e.readthedocs.io/en/main/#). The SiII particle mass for the cloud is calculated by COLT and the column density image is shown below.
