@@ -1,0 +1,16 @@
+# run galaxywinds
+import numpy as np
+
+from galaxywinds import FB20, clouds, constants, utils
+
+if __name__ == "__main__":
+    print("Running galaxy_winds now!")
+
+    print("Running FB20 for wind solution...")
+    wind_solution = FB20.run_FB20()
+    print("Finished FB20!")
+
+    r_arr = np.array([0.5, 1.0, 1.5]) * constants.KPC
+    print(f"Running genclouds for radii = {r_arr/constants.KPC}kpc...")
+    clouds.generate_clouds(r_arr, wind_solution)
+    print("Finished saving cloud files!")
