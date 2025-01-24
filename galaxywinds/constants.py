@@ -15,3 +15,4 @@ M_SUN = 2.0e33
 MU = 0.62
 MU_H = 1 / 0.75
 Z_SOLAR = 0.02
+L_SUN = 3.839e33  # Solar luminosity [erg/s]

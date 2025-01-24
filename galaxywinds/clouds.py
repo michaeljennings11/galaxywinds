@@ -4,10 +4,14 @@ import os
 
 import h5py
 import numpy as np
+import pandas as pd
+import yaml as ym
 
-from galaxywinds import utils
+from galaxywinds import config, constants, utils
 
-enzo_to_colt_dir = "/Users/mjennings/Projects/galaxy_winds/data/interim/enzo_to_colt"
+enzo_to_colt_dir = config.colt_cubes_dir
+bpass_dir = config.bpass_dir
+config_files_dir = config.ion_config_dir
 
 
 def create_coltfile(data, filename):
@@ -81,6 +85,97 @@ def all_cubes(shape, radius, center, params):
     return cubes
 
 
+def get_bpass_L0(file=bpass_dir + "/spectra-bin-imf135_100.z020.dat.gz", age=6.0):
+    col_names = np.array(["wavelength"])
+    ages_n = np.arange(2, 52 + 1, 1)
+    ages = np.power(10, 6 + 0.1 * (ages_n - 2))
+    log_ages = np.log10(ages)
+    log_ages_s = np.array(["%.1f" % number for number in log_ages])
+    col_names = np.concatenate((col_names, log_ages_s))
+    sed_df = pd.read_csv(file, sep="\s+", names=col_names)
+    sed_waves = sed_df["wavelength"].values
+
+    fluxes = sed_df[str(age)]
+    L0 = np.sum(fluxes) * constants.L_SUN
+    return L0
+
+
+class Ion_config(ym.YAMLObject):
+    yaml_tag = "!ionization"
+
+    def __init__(self, options: dict):
+        [setattr(self, key, value) for key, value in options.items()]
+
+
+def generate_ion_config(
+    init_dir="ics",
+    init_base="colt",
+    output_dir="output",
+    output_base="ion",
+    abundances_base=None,
+    abundances_output_base="states",
+    cosmological=False,
+    n_photons=1e6,
+    max_iter=25,
+    max_error=1e-3,
+    plane_direction="+x",
+    Sbol_plane=1e-1,
+    UVB_model="HM12",
+    free_free=True,
+    free_bound=True,
+    two_photon=True,
+    source_file_Z_age="/Users/mjennings/colt/tables/bpass-spectra-bin-imf135_100.hdf5",
+    single_Z=2.0e-2,
+    single_age=1.0,
+    output_photons=False,
+    output_abundances=True,
+    output_photoionization=False,
+    dust_model="/Users/mjennings/colt/tables/MW_WeingartnerDraine.hdf5",
+    metallicity=0.01295,
+    silicon_metallicity=7e-4,
+    dust_to_metal=0.4,
+    silicon_ions=True,
+    ion_bins=True,
+):
+    template_dict = {
+        "init_dir": init_dir,
+        "init_base": init_base,
+        "output_dir": output_dir,
+        "output_base": output_base,
+        "abundances_base": abundances_base,
+        "abundances_output_base": abundances_output_base,
+        "cosmological": cosmological,
+        "n_photons": int(n_photons),
+        "max_iter": max_iter,
+        "max_error": max_error,
+        "plane_direction": plane_direction,
+        "Sbol_plane": Sbol_plane,
+        "UVB_model": UVB_model,
+        "free_free": free_free,
+        "free_bound": free_bound,
+        "two_photon": two_photon,
+        "source_file_Z_age": source_file_Z_age,
+        "single_Z": single_Z,
+        "single_age": single_age,
+        "output_photons": output_photons,
+        "output_abundances": output_abundances,
+        "output_photoionization": output_photoionization,
+        "dust_model": dust_model,
+        "metallicity": metallicity,
+        "silicon_metallicity": silicon_metallicity,
+        "dust_to_metal": dust_to_metal,
+        "silicon_ions": silicon_ions,
+        "ion_bins": ion_bins,
+    }
+    config_dict = {key: val for key, val in template_dict.items() if val is not None}
+    return Ion_config(config_dict)
+
+
+def save_config(configObj, file):
+    with open(file, "w") as yaml_file:
+        ym.dump(configObj, yaml_file, default_flow_style=False)
+
+
 def generate_clouds(r_arr, wind_solution, bpass_model="default"):
     # get wind solution arrays
     rwinds, i_r = utils.find_nearest(
@@ -132,21 +227,21 @@ def generate_clouds(r_arr, wind_solution, bpass_model="default"):
     #######################
     # create config files #
     #######################
-    # if bpass_model == "default":
-    #     sed_file = bpass_dir + "/spectra-bin-imf135_100.z020.dat.gz"
-    #     L0 = get_bpass_L0(sed_file)
-    # Sbols = F_r(rwinds, L0)
+    if bpass_model == "default":
+        sed_file = bpass_dir + "/spectra-bin-imf135_100.z020.dat.gz"
+        L0 = get_bpass_L0(sed_file)
+    Sbols = utils.F_r(rwinds, L0)
 
-    # for i, Sbol in enumerate(Sbols):
-    #     ab_out_file = f"states_sphere_{i:04}"
-    #     conf_out_file = f"ion_sphere_{i:04}"
-    #     init_file = f"cube_sphere_{i:04}"
-    #     config_i = generate_ion_config(
-    #         init_base=init_file,
-    #         output_base=conf_out_file,
-    #         Sbol_plane=float(Sbol),
-    #         abundances_output_base=ab_out_file,
-    #     )
-    #     save_config(
-    #         config_i, config_files_dir + "/ion_configs/" + conf_out_file + ".yaml"
-    #     )
+    for i, Sbol in enumerate(Sbols):
+        ab_out_file = f"states_sphere_{i:04}"
+        conf_out_file = f"ion_sphere_{i:04}"
+        init_file = f"cube_sphere_{i:04}"
+        config_i = generate_ion_config(
+            init_base=init_file,
+            output_base=conf_out_file,
+            Sbol_plane=float(Sbol),
+            abundances_output_base=ab_out_file,
+        )
+        save_config(
+            config_i, config_files_dir + "/ion_configs/" + conf_out_file + ".yaml"
+        )

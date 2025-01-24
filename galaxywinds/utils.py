@@ -36,3 +36,7 @@ def find_nearest(array, values):
     values = values.reshape(values.shape[0], 1)
     idx = np.abs(array - values).argmin(axis=1)
     return array[idx], idx
+
+
+def F_r(r, L0):
+    return L0 / (4 * np.pi * (r) ** 2)

@@ -5,11 +5,11 @@ import h5py
 import numpy as np
 from scipy import interpolate
 
-from galaxywinds import constants
+from galaxywinds import config, constants
 
 # Cooling curve as a function of density, temperature, metallicity
 
-Cooling_File = "/Users/mjennings/Projects/MultiphaseGalacticWind/CoolingTables/z_0.000.hdf5"  ### From Wiersma et al. (2009) appropriate for z=0 UVB
+Cooling_File = config.cooling_file
 f = h5py.File(Cooling_File, "r")
 i_X_He = -3
 Metal_free = f.get("Metal_free")
