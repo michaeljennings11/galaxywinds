@@ -14,6 +14,8 @@ cd glaxaywinds
 python -m pip install -e .
 ```
 
+The galaxywinds code uses the radiative transfer code [COLT](https://colt.readthedocs.io/en/latest/) to calculate the ionization state and produce the spectra of the cold cloud blocks. COLT can be cloned from here: (https://bitbucket.org/aaron_smith/colt/src/master/). After cloning COLT, the directory must be linked to galaxywinds by setting the colt_dir variable in the config.py file.
+
 ## Usage
 The SiII photon data is produced by running [COLT](https://colt.readthedocs.io/en/latest/) on a cloud simulated using [enzo-e](https://enzo-e.readthedocs.io/en/main/#). The SiII particle mass for the cloud is calculated by COLT and the column density image is shown below.
 ![](figures/N_SiII.png)
