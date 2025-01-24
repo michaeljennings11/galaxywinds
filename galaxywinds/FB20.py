@@ -7,11 +7,9 @@ import yaml as ym
 from scipy import interpolate
 from scipy.integrate import solve_ivp
 
-from galaxywinds import constants, cooling, utils
+from galaxywinds import config, constants, cooling, utils
 
-wind_config_file = (
-    "/Users/mjennings/Projects/galaxy_winds/data/interim/FB20Wind/wind_params.yaml"
-)
+wind_config_file = config.wind_param_file
 
 
 def run_FB20(wind_config_file=wind_config_file):
@@ -69,10 +67,10 @@ def run_FB20(wind_config_file=wind_config_file):
     rho0 = Mdot / (Omwind * r_sonic**2 * v0)  ## density at sonic radius
     P0 = rho0 * v0**2 / Mach0**2 / constants.GAMMA  ## pressure at sonic radius
     rhoZ0 = rho0 * Z_wind_init
-    print(
-        "v_wind = %.1e km/s  n_wind = %.1e cm^-3  P_wind = %.1e kb K cm^-3"
-        % (v0 / 1e5, rho0 / (constants.MU * constants.M_P), P0 / constants.K_B)
-    )
+    # print(
+    #     "v_wind = %.1e km/s  n_wind = %.1e cm^-3  P_wind = %.1e kb K cm^-3"
+    #     % (v0 / 1e5, rho0 / (constants.MU * constants.M_P), P0 / constants.K_B)
+    # )
     Edot_per_Vol = Edot / (4 / 3.0 * np.pi * r_sonic**3)  # source terms from SN
     Mdot_per_Vol = Mdot / (4 / 3.0 * np.pi * r_sonic**3)  # source terms from SN
 

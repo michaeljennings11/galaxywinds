@@ -1,6 +1,11 @@
 # Global config file
 # Change directory paths accordingly
 
+import os
+
+PACKAGE_ROOT = os.path.dirname(os.path.realpath(__file__))
+PROJECT_ROOT = os.path.abspath(os.path.join(PACKAGE_ROOT, os.pardir))
+
 # colt directory path
 colt_dir = "/Users/mjennings/colt"
 
@@ -15,6 +20,4 @@ ion_config_dir = colt_cubes_dir + "/config_files"
 cooling_file = "/Users/mjennings/Projects/MultiphaseGalacticWind/CoolingTables/z_0.000.hdf5"  # From Wiersma et al. (2009) appropriate for z=0 UVB
 
 # wind param file
-wind_param_file = (
-    "/Users/mjennings/Projects/galaxy_winds/data/interim/FB20Wind/wind_params.yaml"
-)
+wind_param_file = PROJECT_ROOT + "/wind_params.yaml"
