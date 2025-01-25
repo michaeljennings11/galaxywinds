@@ -21,3 +21,6 @@ cooling_file = "/Users/mjennings/Projects/MultiphaseGalacticWind/CoolingTables/z
 
 # wind param file
 wind_param_file = PROJECT_ROOT + "/wind_params.yaml"
+
+# cloud param file
+cloud_param_file = PROJECT_ROOT + "/cloud_params.yaml"

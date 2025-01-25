@@ -13,6 +13,8 @@ enzo_to_colt_dir = config.colt_cubes_dir
 bpass_dir = config.bpass_dir
 config_files_dir = config.ion_config_dir
 
+cloud_config_file = config.cloud_param_file
+
 
 def create_coltfile(data, filename):
     enzo_to_colt_file = os.path.join(enzo_to_colt_dir, filename)
@@ -92,7 +94,7 @@ def get_bpass_L0(file=bpass_dir + "/spectra-bin-imf135_100.z020.dat.gz", age=6.0
     log_ages = np.log10(ages)
     log_ages_s = np.array(["%.1f" % number for number in log_ages])
     col_names = np.concatenate((col_names, log_ages_s))
-    sed_df = pd.read_csv(file, sep="\s+", names=col_names)
+    sed_df = pd.read_csv(file, sep=r"\s+", names=col_names)
     sed_waves = sed_df["wavelength"].values
 
     fluxes = sed_df[str(age)]
@@ -176,7 +178,14 @@ def save_config(configObj, file):
         ym.dump(configObj, yaml_file, default_flow_style=False)
 
 
-def generate_clouds(r_arr, wind_solution, bpass_model="default"):
+def generate_clouds(
+    wind_solution, cloud_config_file=cloud_config_file, bpass_model="default"
+):
+
+    cloud_params = utils.load_config(cloud_config_file)
+
+    r_arr = np.array(cloud_params["r_array"]) * constants.KPC
+
     # get wind solution arrays
     rwinds, i_r = utils.find_nearest(
         wind_solution.r, r_arr
@@ -186,15 +195,15 @@ def generate_clouds(r_arr, wind_solution, bpass_model="default"):
     Tclouds, rho_clouds, vclouds = wind_solution.get_fileparams()[:, :, i_r]
 
     rc = rclouds
-    px_per_rc = 8
+    px_per_rc = cloud_params["res_rcloud"]
     px_sizes = rclouds / px_per_rc
-    rc_to_rbox = 0.75
+    rc_to_rbox = cloud_params["cloud_box_ratio"]
     rbox_in_px = max(
         round(px_per_rc / rc_to_rbox), px_per_rc + 1
     )  # ensure r_box is at least 1px larger than r_cloud
     rboxs = px_sizes * rbox_in_px
 
-    nx_cube, ny_cube, nz_cube = (rbox_in_px, rbox_in_px, rbox_in_px)
+    nx_cube, ny_cube, nz_cube = (rbox_in_px * 2, rbox_in_px * 2, rbox_in_px * 2)
     cube_shape = (nx_cube, ny_cube, nz_cube)
 
     pos_center = tuple(np.asarray(cube_shape) // 2)

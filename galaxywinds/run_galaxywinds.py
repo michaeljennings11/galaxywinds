@@ -10,7 +10,6 @@ if __name__ == "__main__":
     wind_solution = FB20.run_FB20()
     print("Finished FB20!")
 
-    r_arr = np.array([0.5, 1.0, 1.5]) * constants.KPC
-    print(f"Running genclouds for radii = {r_arr/constants.KPC}kpc...")
-    clouds.generate_clouds(r_arr, wind_solution)
+    print(f"Running genclouds...")
+    clouds.generate_clouds(wind_solution)
     print("Finished saving cloud datacubes and colt config files!")
