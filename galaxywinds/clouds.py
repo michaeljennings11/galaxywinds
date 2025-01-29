@@ -176,6 +176,10 @@ def generate_ion_config(
 def save_config(configObj, file):
     with open(file, "w") as yaml_file:
         ym.dump(configObj, yaml_file, default_flow_style=False)
+    with open(file, "r") as original:
+        data = original.read()
+    with open(file, "w") as modified:
+        modified.write("--- " + data)
 
 
 def generate_clouds(
