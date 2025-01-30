@@ -7,13 +7,14 @@ PACKAGE_ROOT = os.path.dirname(os.path.realpath(__file__))
 PROJECT_ROOT = os.path.abspath(os.path.join(PACKAGE_ROOT, os.pardir))
 
 # colt directory path
-colt_dir = "/Users/mjennings/colt"
+colt_dir = "/Users/mjennings/winds"
 
 # bpass directory path
 bpass_dir = "/Users/mjennings/Projects/galaxy_winds/data/external/SED/bpass-imf135_100"
 
 # colt inputs directory path
 colt_cubes_dir = "/Users/mjennings/Projects/galaxy_winds/data/interim/enzo_to_colt"
+colt_out_dir = "/Users/mjennings/Projects/galaxy_winds/data/interim/colt_outputs"
 ion_config_dir = colt_cubes_dir + "/config_files"
 
 # cooling table file

@@ -10,6 +10,7 @@ import yaml as ym
 from galaxywinds import config, constants, utils
 
 enzo_to_colt_dir = config.colt_cubes_dir
+colt_out_dir = config.colt_out_dir
 bpass_dir = config.bpass_dir
 config_files_dir = config.ion_config_dir
 
@@ -30,7 +31,7 @@ def create_coltfile(data, filename):
             "v",
             data=np.vstack(
                 [data["vx"].flatten(), data["vy"].flatten(), data["vz"].flatten()]
-            ),
+            ).T,
             dtype=np.float64,
         )  # Velocities [cm/s]
         f["v"].attrs["units"] = b"cm/s"
@@ -245,16 +246,20 @@ def generate_clouds(
         L0 = get_bpass_L0(sed_file)
     Sbols = utils.F_r(rwinds, L0)
 
+    config_files_list = []
     for i, Sbol in enumerate(Sbols):
         ab_out_file = f"states_sphere_{i:04}"
         conf_out_file = f"ion_sphere_{i:04}"
+        full_config_file = config_files_dir + "/ion_configs/" + conf_out_file + ".yaml"
+        config_files_list.append(full_config_file)
         init_file = f"cube_sphere_{i:04}"
         config_i = generate_ion_config(
+            init_dir=enzo_to_colt_dir,
             init_base=init_file,
+            output_dir=os.path.join(colt_out_dir, "ionization"),
             output_base=conf_out_file,
             Sbol_plane=float(Sbol),
             abundances_output_base=ab_out_file,
         )
-        save_config(
-            config_i, config_files_dir + "/ion_configs/" + conf_out_file + ".yaml"
-        )
+        save_config(config_i, full_config_file)
+    return config_files_list

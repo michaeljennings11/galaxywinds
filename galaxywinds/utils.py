@@ -6,6 +6,14 @@ import yaml as ym
 from galaxywinds import constants
 
 
+def silentremove(filename):
+    try:
+        os.remove(filename)
+    except OSError as e:
+        if e.errno != errno.ENOENT:  # errno.ENOENT = no such file
+            raise  # re-raise exception if a different error occurred
+
+
 def load_config(file):
     with open(file, "r") as f:
         params = ym.safe_load(f)
