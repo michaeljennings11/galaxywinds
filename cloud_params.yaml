@@ -1,5 +1,5 @@
 res_rcloud: 32 # number of pixels per cloud radius
-cloud_box_ratio: 0.75 # ratio of cloud size to box size
-vturb: False # add turbulent velocity inside cloud flag
+cloud_box_ratio: 0.8 # ratio of cloud size to box size
+vturb: False # flag to add turbulent velocity inside cloud
 
 r_array: [0.5, 1.0, 1.5] # array of radius values in kpc to build wind shells

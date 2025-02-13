@@ -174,15 +174,6 @@ def generate_ion_config(
     return Ion_config(config_dict)
 
 
-def save_config(configObj, file):
-    with open(file, "w") as yaml_file:
-        ym.dump(configObj, yaml_file, default_flow_style=False)
-    with open(file, "r") as original:
-        data = original.read()
-    with open(file, "w") as modified:
-        modified.write("--- " + data)
-
-
 def generate_clouds(
     wind_solution, cloud_config_file=cloud_config_file, bpass_model="default"
 ):
@@ -253,6 +244,9 @@ def generate_clouds(
         full_config_file = config_files_dir + "/ion_configs/" + conf_out_file + ".yaml"
         config_files_list.append(full_config_file)
         init_file = f"cube_sphere_{i:04}"
+        ab_in_file = None
+        if i > 0:
+            ab_in_file = f"states_sphere_{i-1:04}"
         config_i = generate_ion_config(
             init_dir=enzo_to_colt_dir,
             init_base=init_file,
@@ -260,6 +254,7 @@ def generate_clouds(
             output_base=conf_out_file,
             Sbol_plane=float(Sbol),
             abundances_output_base=ab_out_file,
+            abundances_base=ab_in_file,
         )
-        save_config(config_i, full_config_file)
+        utils.save_config(config_i, full_config_file)
     return config_files_list
