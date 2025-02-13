@@ -20,6 +20,15 @@ def load_config(file):
     return params
 
 
+def save_config(configObj, file):
+    with open(file, "w") as yaml_file:
+        ym.dump(configObj, yaml_file, default_flow_style=False)
+    with open(file, "r") as original:
+        data = original.read()
+    with open(file, "w") as modified:
+        modified.write("--- " + data)
+
+
 class Wind:
     def __init__(self, params: dict):
         [setattr(self, key, value) for key, value in params.items()]
