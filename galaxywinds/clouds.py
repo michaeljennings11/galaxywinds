@@ -11,6 +11,8 @@ from galaxywinds import config, constants, utils
 
 enzo_to_colt_dir = config.colt_cubes_dir
 colt_out_dir = config.colt_out_dir
+ionization_dir = os.path.join(colt_out_dir, "ionization")
+line_dir = os.path.join(colt_out_dir, "line")
 bpass_dir = config.bpass_dir
 config_files_dir = config.ion_config_dir
 
@@ -110,6 +112,13 @@ class Ion_config(ym.YAMLObject):
         [setattr(self, key, value) for key, value in options.items()]
 
 
+class Line_config(ym.YAMLObject):
+    yaml_tag = "!mcrt"
+
+    def __init__(self, options: dict):
+        [setattr(self, key, value) for key, value in options.items()]
+
+
 def generate_ion_config(
     init_dir="ics",
     init_base="colt",
@@ -174,18 +183,109 @@ def generate_ion_config(
     return Ion_config(config_dict)
 
 
+def generate_line_config(
+    init_dir="ics",
+    init_base="colt",
+    output_dir="output",
+    output_subdir="SiII-1260",
+    output_base="SiII-1260_sphere",
+    abundances_base="states_sphere",
+    plane_direction="+x",
+    L_plane_cont=1,
+    plane_beam=True,
+    plane_radius_y_bbox=0.4,
+    plane_radius_z_bbox=0.4,
+    continuum_range=[-600, 1500],
+    cosmological=False,
+    line="SiII-1260",
+    v_turb_kms=None,
+    output_mcrt_emission=False,
+    output_mcrt_attenuation=False,
+    output_proj_emission=False,
+    output_proj_attenuation=False,
+    metallicity=0.01295,
+    silicon_metallicity=0.0007,
+    dust_to_metal=0.4,
+    dust_model="MW",
+    n_photons=10000000,
+    output_photons=True,
+    photon_file="photons",
+    freq_range=[-3000, 3000],
+    n_bins=1000,
+    image_radius_bbox=1,
+    n_pixels=160,
+    cameras=[[1, 0, 0]],
+):
+    template_dict = {
+        "init_dir": init_dir,
+        "init_base": init_base,
+        "output_dir": output_dir,
+        "output_subdir": output_subdir,
+        "output_base": output_base,
+        "abundances_base": abundances_base,
+        "plane_direction": plane_direction,
+        "L_plane_cont": L_plane_cont,
+        "plane_beam": plane_beam,
+        "plane_radius_y_bbox": plane_radius_y_bbox,
+        "plane_radius_z_bbox": plane_radius_z_bbox,
+        "continuum_range": continuum_range,
+        "cosmological": cosmological,
+        "line": line,
+        "v_turb_kms": v_turb_kms,
+        "output_mcrt_emission": output_mcrt_emission,
+        "output_mcrt_attenuation": output_mcrt_attenuation,
+        "output_proj_emission": output_proj_emission,
+        "output_proj_attenuation": output_proj_attenuation,
+        "metallicity": metallicity,
+        "silicon_metallicity": silicon_metallicity,
+        "dust_to_metal": dust_to_metal,
+        "dust_model": dust_model,
+        "n_photons": int(n_photons),
+        "output_photons": output_photons,
+        "photon_file": photon_file,
+        "freq_range": freq_range,
+        "n_bins": n_bins,
+        "image_radius_bbox": image_radius_bbox,
+        "n_pixels": n_pixels,
+        "cameras": cameras,
+    }
+    config_dict = {key: val for key, val in template_dict.items() if val is not None}
+    return Line_config(config_dict)
+
+
 def generate_clouds(
     wind_solution, cloud_config_file=cloud_config_file, bpass_model="default"
 ):
+    r_cloud_start, idx_cloud_start = utils.find_nearest(
+        wind_solution.r, np.asarray([wind_solution.r_cloud_start])
+    )
 
     cloud_params = utils.load_config(cloud_config_file)
+    if "r_array" in cloud_params:
+        r_arr = np.array(cloud_params["r_array"]) * constants.KPC
+    elif "n_shells" in cloud_params:
+        n_shells = cloud_params["n_shells"]  # number of radial shells
+        ir = np.arange(0, wind_solution.r.shape[0])  # radial index array
+        ir_partitions = np.array_split(
+            ir[idx_cloud_start[0] : -1], n_shells
+        )  # radial index array partitioned into n shells
+        delta_ir = np.array(
+            [len(x) for x in ir_partitions]
+        )  # width of radial shells in indices
+        ir_starts = [x[0] for x in ir_partitions]  # starting index of each radial shell
+        r_arr = wind_solution.r[(ir_starts + (delta_ir // 2))]
+    else:
+        "Either r_array or n_shells must be provided in cloud_params file!"
 
-    r_arr = np.array(cloud_params["r_array"]) * constants.KPC
+    vturb = cloud_params["vturb"]
+    print(f"vturb: {vturb}")
+    model_name = cloud_params["model_name"]
 
     # get wind solution arrays
     rwinds, i_r = utils.find_nearest(
         wind_solution.r, r_arr
     )  # find nearest matching r values
+    print(f"Generating clouds at r = {rwinds / constants.KPC} kpc...")
     Mclouds = wind_solution.M_cloud[i_r]
     rclouds = (Mclouds / (4 * np.pi * wind_solution.rho_cloud[i_r] / 3)) ** (1 / 3)
     Tclouds, rho_clouds, vclouds = wind_solution.get_fileparams()[:, :, i_r]
@@ -229,20 +329,20 @@ def generate_clouds(
         out_file = f"cube_sphere_{i:04}"
         create_coltfile(data_dict, out_file + ".hdf5")
 
-    #######################
-    # create config files #
-    #######################
+    ###########################
+    # create ion config files #
+    ###########################
     if bpass_model == "default":
         sed_file = bpass_dir + "/spectra-bin-imf135_100.z020.dat.gz"
         L0 = get_bpass_L0(sed_file)
     Sbols = utils.F_r(rwinds, L0)
 
-    config_files_list = []
+    ion_config_files_list = []
     for i, Sbol in enumerate(Sbols):
         ab_out_file = f"states_sphere_{i:04}"
         conf_out_file = f"ion_sphere_{i:04}"
         full_config_file = config_files_dir + "/ion_configs/" + conf_out_file + ".yaml"
-        config_files_list.append(full_config_file)
+        ion_config_files_list.append(full_config_file)
         init_file = f"cube_sphere_{i:04}"
         ab_in_file = None
         if i > 0:
@@ -250,11 +350,41 @@ def generate_clouds(
         config_i = generate_ion_config(
             init_dir=enzo_to_colt_dir,
             init_base=init_file,
-            output_dir=os.path.join(colt_out_dir, "ionization"),
+            output_dir=os.path.join(ionization_dir, model_name),
             output_base=conf_out_file,
             Sbol_plane=float(Sbol),
             abundances_output_base=ab_out_file,
             abundances_base=ab_in_file,
         )
         utils.save_config(config_i, full_config_file)
-    return config_files_list
+
+    ############################
+    # create line config files #
+    ############################
+    spec_line = "SiII-1260"
+    freq_range = np.array([-3000, 3000])
+    vwinds = wind_solution.v_wind[i_r]
+    line_config_files_list = []
+    for i, vwind in enumerate(vwinds):
+        print(vwind)
+        cont_range = freq_range + vwind / constants.KM
+        print(cont_range)
+        conf_out_file = f"{spec_line}_sphere_{i:04}"
+        full_config_file = config_files_dir + "/line_configs/" + conf_out_file + ".yaml"
+        line_config_files_list.append(full_config_file)
+        init_file = f"cube_sphere_{i:04}"
+        ab_in_file = f"states_sphere_{i:04}"
+        config_i = generate_line_config(
+            init_dir=enzo_to_colt_dir,
+            init_base=init_file,
+            output_dir=os.path.join(line_dir, model_name),
+            output_subdir=spec_line,
+            output_base=conf_out_file,
+            abundances_base=ab_in_file,
+            continuum_range=[float(cont_range[0]), float(cont_range[1])],
+            line=spec_line,
+            v_turb_kms=vturb,
+        )
+        utils.save_config(config_i, full_config_file)
+
+    return ion_config_files_list, line_config_files_list

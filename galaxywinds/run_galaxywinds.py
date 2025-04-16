@@ -27,9 +27,22 @@ if __name__ == "__main__":
     print("Finished FB20!")
 
     print(f"Running genclouds...")
-    config_files_list = clouds.generate_clouds(wind_solution)
+    ion_config_files_list, line_config_files_list = clouds.generate_clouds(
+        wind_solution
+    )
     print("Finished saving cloud datacubes and colt config files!")
 
-    print("Running COLT ionization...")
-    for i, config_file in enumerate(config_files_list):
-        run(config_file=config_file, build=False)
+    if config.run_ionization_module:
+        print("Running COLT ionization...")
+        for i, ion_config_file in enumerate(ion_config_files_list):
+            run(config_file=ion_config_file, build=False)
+        print("Finished running ionization!")
+
+    # print("Generating line spectrum config files...")
+    # line_config_files_list = spectrum.generate_line_configs(ion_config_files_list)
+
+    if config.run_line_module:
+        print("Running COLT line mcrt...")
+        for i, line_config_file in enumerate(line_config_files_list):
+            run(config_file=line_config_file, build=False)
+        print("Finished running line mcrt!")
