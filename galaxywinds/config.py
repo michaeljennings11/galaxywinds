@@ -25,3 +25,7 @@ wind_param_file = PROJECT_ROOT + "/wind_params.yaml"
 
 # cloud param file
 cloud_param_file = PROJECT_ROOT + "/cloud_params.yaml"
+
+# runtime options
+run_ionization_module = False
+run_line_module = True
