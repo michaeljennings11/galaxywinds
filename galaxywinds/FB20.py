@@ -370,7 +370,7 @@ def run_FB20(wind_config_file=wind_config_file):
         )[()]
         t_cool_layer = np.where(t_cool_layer < 0, 1e10 * constants.MYR, t_cool_layer)
         ksi = r_cloud / (v_turb * t_cool_layer)
-        return ksi
+        return ksi, r_cloud, v_turb
 
     def supersonic(r, z):
         return z[0] / np.sqrt(constants.GAMMA * z[2] / z[1]) - (1.0 + epsilon)
@@ -543,6 +543,7 @@ def run_FB20(wind_config_file=wind_config_file):
     M_cloud = sol.y[4]
     v_cloud = sol.y[5]
     Z_cloud = sol.y[6]
+    ksi, r_cloud, v_turb = cloud_ksi(r, sol.y)
 
     cloud_Mdots = (
         np.outer(
@@ -637,6 +638,11 @@ def run_FB20(wind_config_file=wind_config_file):
         "cloud_Pdots": cloud_Pdots,
         "Edot_wind": Edot_wind,
         "cloud_Edots": cloud_Edots,
+        "ksi": ksi,
+        "r_cloud": r_cloud,
+        "v_turb": v_turb,
+        "r_sonic": r_sonic,
+        "r_cloud_start": cold_cloud_injection_radial_extent,
     }
 
     return utils.Wind(sol_dict)
