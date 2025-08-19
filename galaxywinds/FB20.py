@@ -493,7 +493,10 @@ def run_FB20(wind_config_file=wind_config_file):
     # multiphase params
     T_cloud = multiphase_params["T_cloud"]
     log_eta_M_cold = np.log10(eta_M_cold)
-    cold_cloud_injection_radial_power = np.inf
+    if "cold_cloud_injection_radial_power" in multiphase_params:
+        cold_cloud_injection_radial_power = multiphase_params["cold_cloud_injection_radial_power"]
+    else:
+        cold_cloud_injection_radial_power = np.inf 
     cold_cloud_injection_radial_extent = (
         multiphase_params["cold_cloud_injection_radial_extent"] * r_sonic
     )
