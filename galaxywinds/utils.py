@@ -22,7 +22,7 @@ def load_config(file):
 
 def save_config(configObj, file):
     with open(file, "w") as yaml_file:
-        ym.dump(configObj, yaml_file, default_flow_style=False)
+        ym.dump(configObj, yaml_file, default_flow_style=None)
     with open(file, "r") as original:
         data = original.read()
     with open(file, "w") as modified:

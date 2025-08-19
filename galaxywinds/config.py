@@ -21,11 +21,11 @@ ion_config_dir = colt_cubes_dir + "/config_files"
 cooling_file = "/Users/mjennings/Projects/MultiphaseGalacticWind/CoolingTables/z_0.000.hdf5"  # From Wiersma et al. (2009) appropriate for z=0 UVB
 
 # wind param file
-wind_param_file = PROJECT_ROOT + "/wind_params.yaml"
+wind_param_file = PROJECT_ROOT + "/wind_params_CLASSY_J0036-3333.yaml"
 
 # cloud param file
 cloud_param_file = PROJECT_ROOT + "/cloud_params.yaml"
 
 # runtime options
-run_ionization_module = False
+run_ionization_module = True
 run_line_module = True

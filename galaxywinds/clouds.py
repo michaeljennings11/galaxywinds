@@ -289,6 +289,7 @@ def generate_clouds(
     Mclouds = wind_solution.M_cloud[i_r]
     rclouds = (Mclouds / (4 * np.pi * wind_solution.rho_cloud[i_r] / 3)) ** (1 / 3)
     Tclouds, rho_clouds, vclouds = wind_solution.get_fileparams()[:, :, i_r]
+    Zcloud = wind_solution.Z_cloud[i_r]
 
     rc = rclouds
     px_per_rc = cloud_params["res_rcloud"]
@@ -332,19 +333,25 @@ def generate_clouds(
     ###########################
     # create ion config files #
     ###########################
-    if bpass_model == "default":
-        sed_file = bpass_dir + "/spectra-bin-imf135_100.z020.dat.gz"
-        L0 = get_bpass_L0(sed_file)
-    Sbols = utils.F_r(rwinds, L0)
+    if "Sbol" in cloud_params: # Check if Sbol is hardcoded for each radii
+        Sbol = cloud_params["Sbol"]
+        Sbols = Sbol*np.ones(rwinds.shape)
+    else: # Calculate Sbol from radius and bpass luminosity
+        if bpass_model == "default":
+            sed_file = bpass_dir + "/spectra-bin-imf135_100.z020.dat.gz"
+            L0 = get_bpass_L0(sed_file)
+        Sbols = utils.F_r(rwinds, L0)
 
     ion_config_files_list = []
-    for i, Sbol in enumerate(Sbols):
+    for i,Sbol in enumerate(Sbols):
         ab_out_file = f"states_sphere_{i:04}"
         conf_out_file = f"ion_sphere_{i:04}"
         full_config_file = config_files_dir + "/ion_configs/" + conf_out_file + ".yaml"
         ion_config_files_list.append(full_config_file)
         init_file = f"cube_sphere_{i:04}"
         ab_in_file = None
+        Z = Zcloud[i]
+        print(Z)
         if i > 0:
             ab_in_file = f"states_sphere_{i-1:04}"
         config_i = generate_ion_config(
@@ -355,6 +362,7 @@ def generate_clouds(
             Sbol_plane=float(Sbol),
             abundances_output_base=ab_out_file,
             abundances_base=ab_in_file,
+            metallicity=float(Z),
         )
         utils.save_config(config_i, full_config_file)
 
@@ -366,9 +374,7 @@ def generate_clouds(
     vwinds = wind_solution.v_wind[i_r]
     line_config_files_list = []
     for i, vwind in enumerate(vwinds):
-        print(vwind)
         cont_range = freq_range + vwind / constants.KM
-        print(cont_range)
         conf_out_file = f"{spec_line}_sphere_{i:04}"
         full_config_file = config_files_dir + "/line_configs/" + conf_out_file + ".yaml"
         line_config_files_list.append(full_config_file)
