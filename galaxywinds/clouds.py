@@ -281,16 +281,18 @@ def generate_clouds(
         n_shells = cloud_params["n_shells"]  # number of radial shells
         ir = np.arange(0, wind_solution.r.shape[0])  # radial index array
         ir_partitions = np.array_split(
-            ir[0 : -1], n_shells
+            ir[0:-1], n_shells
         )  # radial index array partitioned into n shells
         delta_ir = np.array(
             [len(x) for x in ir_partitions]
         )  # width of radial shells in indices
         ir_starts = [x[0] for x in ir_partitions]  # starting index of each radial shell
-        idx_clouds = (ir_starts+(delta_ir//2))
+        idx_clouds = ir_starts + (delta_ir // 2)
         r_arr = r[idx_clouds]
     else:
-        "Either r_array or n_shells must be provided in cloud_params file!"
+        raise ValueError(
+            "Either r_array or n_shells must be provided in cloud_params file!"
+        )
     print(f"r_arr: {r_arr/constants.KPC}")
     print(f"v_c: {wind_solution.v_cloud[idx_clouds]/1e5}")
     print(f"v_w: {wind_solution.v_wind[idx_clouds]/1e5}")
@@ -351,17 +353,17 @@ def generate_clouds(
     ###########################
     # create ion config files #
     ###########################
-    if "Sbol" in cloud_params: # Check if Sbol is hardcoded for each radii
+    if "Sbol" in cloud_params:  # Check if Sbol is hardcoded for each radii
         Sbol = cloud_params["Sbol"]
-        Sbols = Sbol*np.ones(rwinds.shape)
-    else: # Calculate Sbol from radius and bpass luminosity
+        Sbols = Sbol * np.ones(rwinds.shape)
+    else:  # Calculate Sbol from radius and bpass luminosity
         if bpass_model == "default":
             sed_file = bpass_dir + "/spectra-bin-imf135_100.z020.dat.gz"
             L0 = get_bpass_L0(sed_file)
         Sbols = utils.F_r(rwinds, L0)
 
     ion_config_files_list = []
-    for i,Sbol in enumerate(Sbols):
+    for i, Sbol in enumerate(Sbols):
         ab_out_file = f"states_sphere_{i:04}"
         conf_out_file = f"ion_sphere_{i:04}"
         full_config_file = config_files_dir + "/ion_configs/" + conf_out_file + ".yaml"
@@ -374,15 +376,15 @@ def generate_clouds(
             ab_in_dir = ionization_dir
             ab_in_file = f"states_sphere_{i-1:04}"
         config_i = generate_ion_config(
-            init_dir=data_cube_dir, # initial conditions data cube directory
-            init_base=init_file, # initial conditions data cube base file
-            output_dir=ionization_dir, # output ion file directory
-            output_base=conf_out_file, # output ion file base file
+            init_dir=data_cube_dir,  # initial conditions data cube directory
+            init_base=init_file,  # initial conditions data cube base file
+            output_dir=ionization_dir,  # output ion file directory
+            output_base=conf_out_file,  # output ion file base file
             Sbol_plane=float(Sbol),
-            abundances_output_dir=ionization_dir, # abundances output directory
-            abundances_output_base=ab_out_file, # abundances output file base
-            abundances_dir=ab_in_dir, # abundances initial conditions directory
-            abundances_base=ab_in_file, # abundances initial conditions file base
+            abundances_output_dir=ionization_dir,  # abundances output directory
+            abundances_output_base=ab_out_file,  # abundances output file base
+            abundances_dir=ab_in_dir,  # abundances initial conditions directory
+            abundances_base=ab_in_file,  # abundances initial conditions file base
             metallicity=float(Z),
         )
         utils.save_config(config_i, full_config_file)
@@ -407,7 +409,7 @@ def generate_clouds(
             output_dir=line_dir,
             output_subdir=spec_line,
             output_base=conf_out_file,
-            abundances_dir=ionization_dir, # abundances initial conditions directory
+            abundances_dir=ionization_dir,  # abundances initial conditions directory
             abundances_base=ab_in_file,
             continuum_range=[float(cont_range[0]), float(cont_range[1])],
             line=spec_line,
