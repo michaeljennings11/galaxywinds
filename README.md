@@ -20,15 +20,4 @@ python -m pip install -e .
 The galaxywinds code uses the radiative transfer code [COLT](https://colt.readthedocs.io/en/latest/) to calculate the ionization state and produce the spectra of the cold cloud blocks. COLT can be cloned from here: (https://bitbucket.org/aaron_smith/colt/src/master/). After cloning COLT, the directory must be linked to galaxywinds by setting the colt_dir variable in the config.py file.
 
 ## Usage
-The SiII photon data is produced by running [COLT](https://colt.readthedocs.io/en/latest/) on a cloud simulated using [enzo-e](https://enzo-e.readthedocs.io/en/main/#). The SiII particle mass for the cloud is calculated by COLT and the column density image is shown below.
-![](figures/N_SiII.png)
-
-The current implementation generates a random uniform distribution of clouds upon the surface of the unit sphere and builds the spectrum for SiII 1260. The wind opening angle and line-of-sight orientation can both be changed between 0 and 90 degrees.
-
-The SiII 1260 spectrum shown below is for 500 clouds on a spherical shell with opening angle of 45 degrees aligned with the line-of-sight.
-<p float="left">
-  <img src="figures/model_a45p0.png" width="100%" />
-  <img src="figures/SiII1260_a45p0.png" width="100%" /> 
-</p>
-
-Filling out the wind requires generating additional shells at various radii. To do this, galaxywinds can be run each time for a desired radius with the same wind opening angle and line-of-sight orientation (and possibly different cloud number for desired cloud surface density). Because the normalized sphere radius is always 1, the physical radius of the cloud shell is determined by the incident flux used in the radiative transport calculation of COLT. If clouds at different radii meet the Sobelev criteria (no photon interaction between clouds), then each shell's spectrum can be summed for the entire wind spectrum.
+The current implementation partitions the wind into radial shells and assumes a uniform probability distribution of clouds. A single cloud data cube is generated for each radial shell and run through COLT, ionizing the cloud and performing radiative transfer. The radiative transfer outputs all photons with their frequency and direction information.
