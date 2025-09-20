@@ -11,16 +11,22 @@ from galaxywinds import config, constants, utils
 
 enzo_to_colt_dir = config.colt_cubes_dir
 colt_out_dir = config.colt_out_dir
-ionization_dir = os.path.join(colt_out_dir, "ionization")
-line_dir = os.path.join(colt_out_dir, "line")
+model_outs_dir = config.model_outs_dir
+model = config.model
+model_dir = os.path.join(model_outs_dir, model)
+data_cube_dir = os.path.join(model_dir, "data_cubes")
+
+
 bpass_dir = config.bpass_dir
-config_files_dir = config.ion_config_dir
+config_files_dir = os.path.join(model_dir, "config_files")
+ionization_dir = os.path.join(model_dir, "ionization")
+line_dir = os.path.join(model_dir, "line")
 
 cloud_config_file = config.cloud_param_file
 
 
 def create_coltfile(data, filename):
-    enzo_to_colt_file = os.path.join(enzo_to_colt_dir, filename)
+    enzo_to_colt_file = os.path.join(data_cube_dir, filename)
     with h5py.File(enzo_to_colt_file, "w") as f:
         # f.attrs['time'] = np.float64(time.to('s'))  # Current simulation time
         f.attrs["nx"] = np.int32(data["nx"])
@@ -124,6 +130,8 @@ def generate_ion_config(
     init_base="colt",
     output_dir="output",
     output_base="ion",
+    abundances_dir=None,
+    abundances_output_dir=None,
     abundances_base=None,
     abundances_output_base="states",
     cosmological=False,
@@ -154,7 +162,9 @@ def generate_ion_config(
         "init_base": init_base,
         "output_dir": output_dir,
         "output_base": output_base,
+        "abundances_dir": abundances_dir,
         "abundances_base": abundances_base,
+        "abundances_output_dir": abundances_output_dir,
         "abundances_output_base": abundances_output_base,
         "cosmological": cosmological,
         "n_photons": int(n_photons),
@@ -189,6 +199,7 @@ def generate_line_config(
     output_dir="output",
     output_subdir="SiII-1260",
     output_base="SiII-1260_sphere",
+    abundances_dir=None,
     abundances_base="states_sphere",
     plane_direction="+x",
     L_plane_cont=1,
@@ -222,6 +233,7 @@ def generate_line_config(
         "output_dir": output_dir,
         "output_subdir": output_subdir,
         "output_base": output_base,
+        "abundances_dir": abundances_dir,
         "abundances_base": abundances_base,
         "plane_direction": plane_direction,
         "L_plane_cont": L_plane_cont,
@@ -256,6 +268,8 @@ def generate_line_config(
 def generate_clouds(
     wind_solution, cloud_config_file=cloud_config_file, bpass_model="default"
 ):
+    r = wind_solution.r
+    # r_cloud = wind_solution.r_cloud
     r_cloud_start, idx_cloud_start = utils.find_nearest(
         wind_solution.r, np.asarray([wind_solution.r_cloud_start])
     )
@@ -267,15 +281,19 @@ def generate_clouds(
         n_shells = cloud_params["n_shells"]  # number of radial shells
         ir = np.arange(0, wind_solution.r.shape[0])  # radial index array
         ir_partitions = np.array_split(
-            ir[idx_cloud_start[0] : -1], n_shells
+            ir[0 : -1], n_shells
         )  # radial index array partitioned into n shells
         delta_ir = np.array(
             [len(x) for x in ir_partitions]
         )  # width of radial shells in indices
         ir_starts = [x[0] for x in ir_partitions]  # starting index of each radial shell
-        r_arr = wind_solution.r[(ir_starts + (delta_ir // 2))]
+        idx_clouds = (ir_starts+(delta_ir//2))
+        r_arr = r[idx_clouds]
     else:
         "Either r_array or n_shells must be provided in cloud_params file!"
+    print(f"r_arr: {r_arr/constants.KPC}")
+    print(f"v_c: {wind_solution.v_cloud[idx_clouds]/1e5}")
+    print(f"v_w: {wind_solution.v_wind[idx_clouds]/1e5}")
 
     vturb = cloud_params["vturb"]
     print(f"vturb: {vturb}")
@@ -306,7 +324,7 @@ def generate_clouds(
     pos_center = tuple(np.asarray(cube_shape) // 2)
 
     # create cubes
-    for i, idx in enumerate(i_r):
+    for i, idx in enumerate(idx_clouds):
         bbox_cube = np.array(
             [[-rboxs[i], -rboxs[i], -rboxs[i]], [+rboxs[i], +rboxs[i], +rboxs[i]]]
         )
@@ -349,19 +367,22 @@ def generate_clouds(
         full_config_file = config_files_dir + "/ion_configs/" + conf_out_file + ".yaml"
         ion_config_files_list.append(full_config_file)
         init_file = f"cube_sphere_{i:04}"
+        ab_in_dir = None
         ab_in_file = None
         Z = Zcloud[i]
-        print(Z)
         if i > 0:
+            ab_in_dir = ionization_dir
             ab_in_file = f"states_sphere_{i-1:04}"
         config_i = generate_ion_config(
-            init_dir=enzo_to_colt_dir,
-            init_base=init_file,
-            output_dir=os.path.join(ionization_dir, model_name),
-            output_base=conf_out_file,
+            init_dir=data_cube_dir, # initial conditions data cube directory
+            init_base=init_file, # initial conditions data cube base file
+            output_dir=ionization_dir, # output ion file directory
+            output_base=conf_out_file, # output ion file base file
             Sbol_plane=float(Sbol),
-            abundances_output_base=ab_out_file,
-            abundances_base=ab_in_file,
+            abundances_output_dir=ionization_dir, # abundances output directory
+            abundances_output_base=ab_out_file, # abundances output file base
+            abundances_dir=ab_in_dir, # abundances initial conditions directory
+            abundances_base=ab_in_file, # abundances initial conditions file base
             metallicity=float(Z),
         )
         utils.save_config(config_i, full_config_file)
@@ -383,9 +404,10 @@ def generate_clouds(
         config_i = generate_line_config(
             init_dir=enzo_to_colt_dir,
             init_base=init_file,
-            output_dir=os.path.join(line_dir, model_name),
+            output_dir=line_dir,
             output_subdir=spec_line,
             output_base=conf_out_file,
+            abundances_dir=ionization_dir, # abundances initial conditions directory
             abundances_base=ab_in_file,
             continuum_range=[float(cont_range[0]), float(cont_range[1])],
             line=spec_line,

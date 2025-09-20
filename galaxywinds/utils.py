@@ -1,5 +1,6 @@
 # Useful utility functions
-
+import os
+import errno
 import numpy as np
 import yaml as ym
 
