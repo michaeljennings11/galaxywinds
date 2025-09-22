@@ -53,14 +53,14 @@ def create_coltfile(data, filename):
         f["T"].attrs["units"] = b"K"
 
 
-def sphere(shape, radius, position):
+def spheroid(shape, radii, position):
     """Generate an n-dimensional spherical mask."""
-    # assume shape and position have the same length and contain ints
+    # assume shape, radii and position have the same length and contain ints
     # the units are pixels / voxels (px for short)
-    # radius is a int or float in px
-    assert len(position) == len(shape)
+    # radius is in px
+    assert len(position) == len(shape) == len(radii)
     n = len(shape)
-    semisizes = (radius,) * len(shape)
+    semisizes = radii
 
     # genereate the grid for the support points
     # centered at the position indicated by position
@@ -81,7 +81,7 @@ def sphere(shape, radius, position):
 
 def create_datacube(shape, radius, center, xw, xc):
     cube = np.ones(shape)
-    mask = sphere(shape, radius, center)
+    mask = spheroid(shape, radius, center)
     cube[~mask] *= xw
     cube[mask] *= xc
     return cube
@@ -325,13 +325,18 @@ def generate_clouds(
 
     pos_center = tuple(np.asarray(cube_shape) // 2)
 
+    radii = (px_per_rc,) * 3  # sphere
+
     # create cubes
     for i, idx in enumerate(idx_clouds):
         bbox_cube = np.array(
             [[-rboxs[i], -rboxs[i], -rboxs[i]], [+rboxs[i], +rboxs[i], +rboxs[i]]]
         )
         T_cube, rho_cube, vx_cube = all_cubes(
-            cube_shape, px_per_rc, pos_center, wind_solution.get_fileparams()[:, :, idx]
+            cube_shape,
+            radii,
+            pos_center,
+            wind_solution.get_fileparams()[:, :, idx],
         )
         vy_cube = np.copy(vx_cube) * 0
         vz_cube = vy_cube
