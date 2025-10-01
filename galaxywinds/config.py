@@ -23,7 +23,7 @@ ion_config_dir = colt_cubes_dir + "/config_files"
 cooling_file = "/Users/mjennings/Projects/MultiphaseGalacticWind/CoolingTables/z_0.000.hdf5"  # From Wiersma et al. (2009) appropriate for z=0 UVB
 
 # model name
-model = "CLASSY_J0036-3333_UVBonly"
+model = "CLASSY_J0036-3333_UVBonly_prolate"
 
 # wind param file
 wind_param_file = PROJECT_ROOT + "/wind_params_CLASSY_J0036-3333.yaml"
