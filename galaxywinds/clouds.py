@@ -404,7 +404,7 @@ def generate_clouds(
         init_file = f"cube_sphere_{i:04}"
         ab_in_file = f"states_sphere_{i:04}"
         config_i = generate_line_config(
-            init_dir=enzo_to_colt_dir,
+            init_dir=data_cube_dir,
             init_base=init_file,
             output_dir=line_dir,
             output_subdir=spec_line,
