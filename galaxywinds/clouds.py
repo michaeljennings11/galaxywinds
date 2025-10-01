@@ -38,7 +38,9 @@ def create_coltfile(data, filename):
         f.create_dataset(
             "v",
             data=np.vstack(
-                [data["vx"].flatten(), data["vy"].flatten(), data["vz"].flatten()]
+                [data["vx"].flatten(),
+                 data["vy"].flatten(),
+                 data["vz"].flatten()]
             ).T,
             dtype=np.float64,
         )  # Velocities [cm/s]
@@ -103,7 +105,8 @@ def all_cubes(shape, radius, center, params):
     return cubes
 
 
-def get_bpass_L0(file=bpass_dir + "/spectra-bin-imf135_100.z020.dat.gz", age=6.0):
+def get_bpass_L0(file=bpass_dir + "/spectra-bin-imf135_100.z020.dat.gz",
+                 age=6.0):
     col_names = np.array(["wavelength"])
     ages_n = np.arange(2, 52 + 1, 1)
     ages = np.power(10, 6 + 0.1 * (ages_n - 2))
@@ -196,7 +199,8 @@ def generate_ion_config(
         "silicon_ions": silicon_ions,
         "ion_bins": ion_bins,
     }
-    config_dict = {key: val for key, val in template_dict.items() if val is not None}
+    config_dict = {key: val for key,
+                   val in template_dict.items() if val is not None}
     return Ion_config(config_dict)
 
 
@@ -268,7 +272,8 @@ def generate_line_config(
         "n_pixels": n_pixels,
         "cameras": cameras,
     }
-    config_dict = {key: val for key, val in template_dict.items() if val is not None}
+    config_dict = {key: val for key,
+                   val in template_dict.items() if val is not None}
     return Line_config(config_dict)
 
 
@@ -293,7 +298,8 @@ def generate_clouds(
         delta_ir = np.array(
             [len(x) for x in ir_partitions]
         )  # width of radial shells in indices
-        ir_starts = [x[0] for x in ir_partitions]  # starting index of each radial shell
+        # starting index of each radial shell
+        ir_starts = [x[0] for x in ir_partitions]
         idx_clouds = ir_starts + (delta_ir // 2)
         r_arr = r[idx_clouds]
     else:
