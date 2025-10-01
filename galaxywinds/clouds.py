@@ -38,7 +38,9 @@ def create_coltfile(data, filename):
         f.create_dataset(
             "v",
             data=np.vstack(
-                [data["vx"].flatten(), data["vy"].flatten(), data["vz"].flatten()]
+                [data["vx"].flatten(),
+                 data["vy"].flatten(),
+                 data["vz"].flatten()]
             ).T,
             dtype=np.float64,
         )  # Velocities [cm/s]
@@ -53,14 +55,14 @@ def create_coltfile(data, filename):
         f["T"].attrs["units"] = b"K"
 
 
-def sphere(shape, radius, position):
+def spheroid(shape, radii, position):
     """Generate an n-dimensional spherical mask."""
-    # assume shape and position have the same length and contain ints
+    # assume shape, radii and position have the same length and contain ints
     # the units are pixels / voxels (px for short)
-    # radius is a int or float in px
-    assert len(position) == len(shape)
+    # radius is in px
+    assert len(position) == len(shape) == len(radii)
     n = len(shape)
-    semisizes = (radius,) * len(shape)
+    semisizes = radii
 
     # genereate the grid for the support points
     # centered at the position indicated by position
@@ -79,12 +81,19 @@ def sphere(shape, radius, position):
     return arr <= 1.0
 
 
-def create_datacube(shape, radius, center, xw, xc):
-    cube = np.ones(shape)
-    mask = sphere(shape, radius, center)
-    cube[~mask] *= xw
-    cube[mask] *= xc
-    return cube
+def create_datacube(shape, radius, center, xw, xc, method="spheroid"):
+    datacube = np.ones(shape)
+    match method:
+        case "spheroid" | "sphere":
+            shape_func = spheroid
+        case _:
+            raise ValueError(
+                f"{method} method not implemented. Choose \"sphere\", \"spheroid\".")
+    mask = shape_func(shape, radius, center)
+    print(mask.shape)
+    datacube[~mask] *= xw
+    datacube[mask] *= xc
+    return datacube
 
 
 def all_cubes(shape, radius, center, params):
@@ -96,7 +105,8 @@ def all_cubes(shape, radius, center, params):
     return cubes
 
 
-def get_bpass_L0(file=bpass_dir + "/spectra-bin-imf135_100.z020.dat.gz", age=6.0):
+def get_bpass_L0(file=bpass_dir + "/spectra-bin-imf135_100.z020.dat.gz",
+                 age=6.0):
     col_names = np.array(["wavelength"])
     ages_n = np.arange(2, 52 + 1, 1)
     ages = np.power(10, 6 + 0.1 * (ages_n - 2))
@@ -140,7 +150,7 @@ def generate_ion_config(
     max_error=1e-3,
     plane_direction="+x",
     Sbol_plane=1e-1,
-    UVB_model="HM12",
+    source_file_UVB="/Users/mjennings/Projects/galaxy_winds/data/external/UVB/hm12/UVB_HM12.hdf5",
     free_free=True,
     free_bound=True,
     two_photon=True,
@@ -172,7 +182,7 @@ def generate_ion_config(
         "max_error": max_error,
         "plane_direction": plane_direction,
         "Sbol_plane": Sbol_plane,
-        "UVB_model": UVB_model,
+        "source_file_UVB": source_file_UVB,
         "free_free": free_free,
         "free_bound": free_bound,
         "two_photon": two_photon,
@@ -189,7 +199,8 @@ def generate_ion_config(
         "silicon_ions": silicon_ions,
         "ion_bins": ion_bins,
     }
-    config_dict = {key: val for key, val in template_dict.items() if val is not None}
+    config_dict = {key: val for key,
+                   val in template_dict.items() if val is not None}
     return Ion_config(config_dict)
 
 
@@ -261,7 +272,8 @@ def generate_line_config(
         "n_pixels": n_pixels,
         "cameras": cameras,
     }
-    config_dict = {key: val for key, val in template_dict.items() if val is not None}
+    config_dict = {key: val for key,
+                   val in template_dict.items() if val is not None}
     return Line_config(config_dict)
 
 
@@ -286,7 +298,8 @@ def generate_clouds(
         delta_ir = np.array(
             [len(x) for x in ir_partitions]
         )  # width of radial shells in indices
-        ir_starts = [x[0] for x in ir_partitions]  # starting index of each radial shell
+        # starting index of each radial shell
+        ir_starts = [x[0] for x in ir_partitions]
         idx_clouds = ir_starts + (delta_ir // 2)
         r_arr = r[idx_clouds]
     else:
@@ -307,31 +320,72 @@ def generate_clouds(
     )  # find nearest matching r values
     print(f"Generating clouds at r = {rwinds / constants.KPC} kpc...")
     Mclouds = wind_solution.M_cloud[i_r]
-    rclouds = (Mclouds / (4 * np.pi * wind_solution.rho_cloud[i_r] / 3)) ** (1 / 3)
+    rclouds = (
+        Mclouds / (4 * np.pi * wind_solution.rho_cloud[i_r] / 3)) ** (1 / 3)
     Tclouds, rho_clouds, vclouds = wind_solution.get_fileparams()[:, :, i_r]
     Zcloud = wind_solution.Z_cloud[i_r]
 
     rc = rclouds
     px_per_rc = cloud_params["res_rcloud"]
-    px_sizes = rclouds / px_per_rc
-    rc_to_rbox = cloud_params["cloud_box_ratio"]
-    rbox_in_px = max(
-        round(px_per_rc / rc_to_rbox), px_per_rc + 1
-    )  # ensure r_box is at least 1px larger than r_cloud
-    rboxs = px_sizes * rbox_in_px
-
-    nx_cube, ny_cube, nz_cube = (rbox_in_px * 2, rbox_in_px * 2, rbox_in_px * 2)
-    cube_shape = (nx_cube, ny_cube, nz_cube)
-
-    pos_center = tuple(np.asarray(cube_shape) // 2)
+    cloud_geometry = cloud_params["cloud_geometry"]
+    match cloud_geometry:
+        case "sphere":
+            px_sizes = rc / px_per_rc
+            rc_to_rbox = cloud_params["cloud_box_ratio"]
+            rbox_in_px = max(
+                round(px_per_rc / rc_to_rbox), px_per_rc + 1
+            )  # ensure r_box is at least 1px larger than r_cloud
+            rboxs = px_sizes * rbox_in_px
+            nx_cube, ny_cube, nz_cube = (
+                rbox_in_px * 2, rbox_in_px * 2, rbox_in_px * 2)
+            cube_shape = (nx_cube, ny_cube, nz_cube)
+            pos_center = tuple(np.asarray(cube_shape) // 2)
+            radii = (px_per_rc,) * 3  # sphere
+        case "spheroid":
+            if "delta" in cloud_params:
+                delta = cloud_params["delta"]
+            else:
+                raise ValueError(
+                    "delta parameter must be specified when using spheroid cloud geometry!")
+            a_axes = rc*delta**(-1./3.)
+            px_per_lc = int(px_per_rc * delta)
+            px_sizes = a_axes / px_per_rc
+            rc_to_rbox = cloud_params["cloud_box_ratio"]
+            rbox_in_px = max(
+                round(px_per_rc / rc_to_rbox), px_per_rc + 1
+            )  # ensure r_box is at least 1px larger than r_cloud
+            rboxs = px_sizes * rbox_in_px
+            lbox_in_px = max(
+                round(px_per_lc / rc_to_rbox), px_per_lc + 1
+            )  # ensure r_box is at least 1px larger than r_cloud
+            lboxs = px_sizes * lbox_in_px
+            nx_cube, ny_cube, nz_cube = (
+                lbox_in_px * 2, rbox_in_px * 2, rbox_in_px * 2)
+            cube_shape = (nx_cube, ny_cube, nz_cube)
+            pos_center = tuple(np.asarray(cube_shape) // 2)
+            radii = (px_per_lc, px_per_rc, px_per_rc)
+        case _:
+            raise ValueError(
+                f"{cloud_geometry} cloud geometry not implemented. Choose \"sphere\" or \"spheroid\".")
 
     # create cubes
     for i, idx in enumerate(idx_clouds):
-        bbox_cube = np.array(
-            [[-rboxs[i], -rboxs[i], -rboxs[i]], [+rboxs[i], +rboxs[i], +rboxs[i]]]
-        )
+        match cloud_geometry:
+            case "sphere":
+                bbox_cube = np.array(
+                    [[-rboxs[i], -rboxs[i], -rboxs[i]],
+                     [+rboxs[i], +rboxs[i], +rboxs[i]]]
+                )
+            case "spheroid":
+                bbox_cube = np.array(
+                    [[-lboxs[i], -rboxs[i], -rboxs[i]],
+                     [+lboxs[i], +rboxs[i], +rboxs[i]]]
+                )
         T_cube, rho_cube, vx_cube = all_cubes(
-            cube_shape, px_per_rc, pos_center, wind_solution.get_fileparams()[:, :, idx]
+            cube_shape,
+            radii,
+            pos_center,
+            wind_solution.get_fileparams()[:, :, idx],
         )
         vy_cube = np.copy(vx_cube) * 0
         vz_cube = vy_cube
