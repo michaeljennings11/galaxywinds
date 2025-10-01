@@ -3,9 +3,7 @@
 import os
 import subprocess
 
-import numpy as np
-
-from galaxywinds import FB20, clouds, config, constants, utils
+from galaxywinds import FB20, clouds, config, utils
 
 model_outs_dir = config.model_outs_dir
 model = config.model
