@@ -5,6 +5,7 @@ import subprocess
 
 from galaxywinds import FB20, clouds, config, utils
 
+colt_executable = config.colt_executable
 model_outs_dir = config.model_outs_dir
 model = config.model
 model_dir = os.path.join(model_outs_dir, model)
@@ -14,7 +15,11 @@ ionization_dir = os.path.join(model_dir, "ionization")
 line_dir = os.path.join(model_dir, "line")
 
 
-def run(executable="colt", config_file="config.yaml", build=True, tasks=1, threads=8):
+def run(executable=colt_executable,
+        config_file="config.yaml",
+        build=True,
+        tasks=1,
+        threads=8):
     """Run an executable."""
     executable = config.colt_dir + "/" + executable
     print(f"Running executable: {executable}.")

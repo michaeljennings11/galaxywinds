@@ -8,6 +8,7 @@ PROJECT_ROOT = os.path.abspath(os.path.join(PACKAGE_ROOT, os.pardir))
 
 # colt directory path
 colt_dir = "/Users/mjennings/winds"
+colt_executable = "colt_uvb2"
 
 # bpass directory path
 bpass_dir = "/Users/mjennings/Projects/galaxy_winds/data/external/SED/bpass-imf135_100"
