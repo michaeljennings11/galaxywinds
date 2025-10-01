@@ -79,12 +79,19 @@ def spheroid(shape, radii, position):
     return arr <= 1.0
 
 
-def create_datacube(shape, radius, center, xw, xc):
-    cube = np.ones(shape)
-    mask = spheroid(shape, radius, center)
-    cube[~mask] *= xw
-    cube[mask] *= xc
-    return cube
+def create_datacube(shape, radius, center, xw, xc, method="spheroid"):
+    datacube = np.ones(shape)
+    match method:
+        case "spheroid" | "sphere":
+            shape_func = spheroid
+        case _:
+            raise ValueError(
+                f"{method} method not implemented. Choose \"sphere\", \"spheroid\".")
+    mask = shape_func(shape, radius, center)
+    print(mask.shape)
+    datacube[~mask] *= xw
+    datacube[mask] *= xc
+    return datacube
 
 
 def all_cubes(shape, radius, center, params):
@@ -307,31 +314,67 @@ def generate_clouds(
     )  # find nearest matching r values
     print(f"Generating clouds at r = {rwinds / constants.KPC} kpc...")
     Mclouds = wind_solution.M_cloud[i_r]
-    rclouds = (Mclouds / (4 * np.pi * wind_solution.rho_cloud[i_r] / 3)) ** (1 / 3)
+    rclouds = (
+        Mclouds / (4 * np.pi * wind_solution.rho_cloud[i_r] / 3)) ** (1 / 3)
     Tclouds, rho_clouds, vclouds = wind_solution.get_fileparams()[:, :, i_r]
     Zcloud = wind_solution.Z_cloud[i_r]
 
     rc = rclouds
     px_per_rc = cloud_params["res_rcloud"]
-    px_sizes = rclouds / px_per_rc
-    rc_to_rbox = cloud_params["cloud_box_ratio"]
-    rbox_in_px = max(
-        round(px_per_rc / rc_to_rbox), px_per_rc + 1
-    )  # ensure r_box is at least 1px larger than r_cloud
-    rboxs = px_sizes * rbox_in_px
-
-    nx_cube, ny_cube, nz_cube = (rbox_in_px * 2, rbox_in_px * 2, rbox_in_px * 2)
-    cube_shape = (nx_cube, ny_cube, nz_cube)
-
-    pos_center = tuple(np.asarray(cube_shape) // 2)
-
-    radii = (px_per_rc,) * 3  # sphere
+    cloud_geometry = cloud_params["cloud_geometry"]
+    match cloud_geometry:
+        case "sphere":
+            px_sizes = rc / px_per_rc
+            rc_to_rbox = cloud_params["cloud_box_ratio"]
+            rbox_in_px = max(
+                round(px_per_rc / rc_to_rbox), px_per_rc + 1
+            )  # ensure r_box is at least 1px larger than r_cloud
+            rboxs = px_sizes * rbox_in_px
+            nx_cube, ny_cube, nz_cube = (
+                rbox_in_px * 2, rbox_in_px * 2, rbox_in_px * 2)
+            cube_shape = (nx_cube, ny_cube, nz_cube)
+            pos_center = tuple(np.asarray(cube_shape) // 2)
+            radii = (px_per_rc,) * 3  # sphere
+        case "spheroid":
+            if "delta" in cloud_params:
+                delta = cloud_params["delta"]
+            else:
+                raise ValueError(
+                    "delta parameter must be specified when using spheroid cloud geometry!")
+            a_axes = rc*delta**(-1./3.)
+            px_per_lc = int(px_per_rc * delta)
+            px_sizes = a_axes / px_per_rc
+            rc_to_rbox = cloud_params["cloud_box_ratio"]
+            rbox_in_px = max(
+                round(px_per_rc / rc_to_rbox), px_per_rc + 1
+            )  # ensure r_box is at least 1px larger than r_cloud
+            rboxs = px_sizes * rbox_in_px
+            lbox_in_px = max(
+                round(px_per_lc / rc_to_rbox), px_per_lc + 1
+            )  # ensure r_box is at least 1px larger than r_cloud
+            lboxs = px_sizes * lbox_in_px
+            nx_cube, ny_cube, nz_cube = (
+                lbox_in_px * 2, rbox_in_px * 2, rbox_in_px * 2)
+            cube_shape = (nx_cube, ny_cube, nz_cube)
+            pos_center = tuple(np.asarray(cube_shape) // 2)
+            radii = (px_per_lc, px_per_rc, px_per_rc)
+        case _:
+            raise ValueError(
+                f"{cloud_geometry} cloud geometry not implemented. Choose \"sphere\" or \"spheroid\".")
 
     # create cubes
     for i, idx in enumerate(idx_clouds):
-        bbox_cube = np.array(
-            [[-rboxs[i], -rboxs[i], -rboxs[i]], [+rboxs[i], +rboxs[i], +rboxs[i]]]
-        )
+        match cloud_geometry:
+            case "sphere":
+                bbox_cube = np.array(
+                    [[-rboxs[i], -rboxs[i], -rboxs[i]],
+                     [+rboxs[i], +rboxs[i], +rboxs[i]]]
+                )
+            case "spheroid":
+                bbox_cube = np.array(
+                    [[-lboxs[i], -rboxs[i], -rboxs[i]],
+                     [+lboxs[i], +rboxs[i], +rboxs[i]]]
+                )
         T_cube, rho_cube, vx_cube = all_cubes(
             cube_shape,
             radii,

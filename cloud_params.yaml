@@ -1,6 +1,8 @@
-model_name: CLASSY_J0036-3333
-res_rcloud: 32              # number of pixels per cloud radius
+model_name: CLASSY_J0036-3333_UVBonly
+cloud_geometry: spheroid
+res_rcloud: 64              # number of pixels per cloud radius
 cloud_box_ratio: 0.8        # ratio of cloud size to box size
+delta: 0.25                 # b/a ratio for spheroid
 vturb: null                # flag to add turbulent velocity inside cloud
 
 # r_array: [0.5, 1.0, 1.5]    # array of radius values in kpc to build wind shells
