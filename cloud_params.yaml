@@ -1,4 +1,3 @@
-model_name: CLASSY_J0036-3333_UVBonly
 cloud_geometry: spheroid
 res_rcloud: 64              # number of pixels per cloud radius
 cloud_box_ratio: 0.8        # ratio of cloud size to box size

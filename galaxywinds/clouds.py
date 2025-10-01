@@ -312,7 +312,6 @@ def generate_clouds(
 
     vturb = cloud_params["vturb"]
     print(f"vturb: {vturb}")
-    model_name = cloud_params["model_name"]
 
     # get wind solution arrays
     rwinds, i_r = utils.find_nearest(
