@@ -325,44 +325,48 @@ def generate_clouds(
     Zcloud = wind_solution.Z_cloud[i_r]
 
     rc = rclouds
-    px_per_rc = cloud_params["res_rcloud"]
+    px_per_rc = np.ones(rc.shape, dtype=int)*cloud_params["res_rcloud"]
     cloud_geometry = cloud_params["cloud_geometry"]
+    cube_dims_match = True
     match cloud_geometry:
         case "sphere":
             px_sizes = rc / px_per_rc
             rc_to_rbox = cloud_params["cloud_box_ratio"]
-            rbox_in_px = max(
-                round(px_per_rc / rc_to_rbox), px_per_rc + 1
+            rbox_in_px = np.maximum(
+                np.round(px_per_rc / rc_to_rbox), px_per_rc + 1
             )  # ensure r_box is at least 1px larger than r_cloud
             rboxs = px_sizes * rbox_in_px
             nx_cube, ny_cube, nz_cube = (
                 rbox_in_px * 2, rbox_in_px * 2, rbox_in_px * 2)
-            cube_shape = (nx_cube, ny_cube, nz_cube)
-            pos_center = tuple(np.asarray(cube_shape) // 2)
-            radii = (px_per_rc,) * 3  # sphere
+            cube_shape = np.column_stack((nx_cube, ny_cube, nz_cube)).astype(int)
+            pos_center = cube_shape // 2
+            radii = np.columns_stack((px_per_rc,) * 3)  # sphere
         case "spheroid":
             if "delta" in cloud_params:
-                delta = cloud_params["delta"]
+                delta = np.asarray(cloud_params["delta"])
             else:
                 raise ValueError(
                     "delta parameter must be specified when using spheroid cloud geometry!")
+            if delta.ndim != 0:
+                cube_dims_match = False
+            delta = np.ones(rc.shape)*delta
             a_axes = rc*delta**(-1./3.)
-            px_per_lc = int(px_per_rc * delta)
+            px_per_lc = np.round(px_per_rc * delta).astype(int)
             px_sizes = a_axes / px_per_rc
             rc_to_rbox = cloud_params["cloud_box_ratio"]
-            rbox_in_px = max(
-                round(px_per_rc / rc_to_rbox), px_per_rc + 1
+            rbox_in_px = np.maximum(
+                np.round(px_per_rc / rc_to_rbox), px_per_rc + 1
             )  # ensure r_box is at least 1px larger than r_cloud
             rboxs = px_sizes * rbox_in_px
-            lbox_in_px = max(
-                round(px_per_lc / rc_to_rbox), px_per_lc + 1
+            lbox_in_px = np.maximum(
+                np.round(px_per_lc / rc_to_rbox), px_per_lc + 1
             )  # ensure r_box is at least 1px larger than r_cloud
             lboxs = px_sizes * lbox_in_px
             nx_cube, ny_cube, nz_cube = (
                 lbox_in_px * 2, rbox_in_px * 2, rbox_in_px * 2)
-            cube_shape = (nx_cube, ny_cube, nz_cube)
-            pos_center = tuple(np.asarray(cube_shape) // 2)
-            radii = (px_per_lc, px_per_rc, px_per_rc)
+            cube_shape = np.column_stack((nx_cube, ny_cube, nz_cube)).astype(int)
+            pos_center = cube_shape // 2
+            radii = np.column_stack((px_per_lc, px_per_rc, px_per_rc))
         case _:
             raise ValueError(
                 f"{cloud_geometry} cloud geometry not implemented. Choose \"sphere\" or \"spheroid\".")
@@ -381,18 +385,18 @@ def generate_clouds(
                      [+lboxs[i], +rboxs[i], +rboxs[i]]]
                 )
         T_cube, rho_cube, vx_cube = all_cubes(
-            cube_shape,
-            radii,
-            pos_center,
+            cube_shape[i],
+            radii[i],
+            pos_center[i],
             wind_solution.get_fileparams()[:, :, idx],
         )
         vy_cube = np.copy(vx_cube) * 0
         vz_cube = vy_cube
         data_dict = {
-            "nx": nx_cube,
-            "ny": ny_cube,
-            "nz": nz_cube,
-            "n_cells": nx_cube * ny_cube * nz_cube,
+            "nx": nx_cube[i],
+            "ny": ny_cube[i],
+            "nz": nz_cube[i],
+            "n_cells": nx_cube[i] * ny_cube[i] * nz_cube[i],
             "bbox": bbox_cube,
             "vx": vx_cube,
             "vy": vy_cube,
@@ -425,7 +429,7 @@ def generate_clouds(
         ab_in_dir = None
         ab_in_file = None
         Z = Zcloud[i]
-        if i > 0:
+        if i > 0 and cube_dims_match:
             ab_in_dir = ionization_dir
             ab_in_file = f"states_sphere_{i-1:04}"
         config_i = generate_ion_config(
